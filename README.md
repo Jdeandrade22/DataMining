@@ -19,12 +19,7 @@ This web application provides comprehensive information about electric vehicle c
   - Total number of stations
   - Total number of chargers
   - Station addresses and locations
-
-### Prediction System
-- Predict potential number of chargers for selected locations
-- Compare predictions with actual current infrastructure
-- View nearby stations within 15 miles
-- Distance calculations in miles for US-based users
+  
 
 ### Real-time Updates
 - Interactive state and city selection
@@ -49,6 +44,7 @@ pip install -r requirements.txt
 ```bash
 python app.py
 ```
+Note: On first run, the application will automatically train and save the machine learning model using the provided dataset. This may take a few moments.
 
 4. Open your web browser and navigate to:
 ```
