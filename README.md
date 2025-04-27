@@ -51,47 +51,42 @@ Note: On first run, the application will automatically train and save the machin
 http://127.0.0.1:5000/
 ```
 
-## Usage Guide
+## Windows Setup Instructions
 
-### 1. Exploring the Map
-- Initial view shows nationwide charging station distribution
-- Color-coded points indicate charging station density:
-  - Green: Low density
-  - Blue: Medium-low density
-  - Purple: Medium density
-  - Orange: Medium-high density
-  - Red: High density
-- Click on any point to see station details
+1. Clone or download this repository to your computer.
+2. Open a terminal (Command Prompt or PowerShell) in the project directory.
+3. (Recommended) Create and activate a virtual environment:
+   ```
+   python -m venv .venv
+   .venv\Scripts\activate
+   ```
+4. Install all required packages:
+   ```
+   pip install -r requirements.txt
+   ```
+5. Run the Flask app:
+   ```
+   python app.py
+   ```
+6. Open your web browser and go to:
+   ```
+   http://127.0.0.1:5000/
+   ```
 
-### 2. Searching for Locations
-- Use the search box to find stations by:
-  - State name
-  - City name
-  - Station name
-- Results show:
-  - Total number of stations
-  - Total number of chargers
-  - Top cities (for state searches)
+## Usage Guide (Updated)
 
-### 3. Making Predictions
-1. Select a state from the dropdown
-   - Map automatically updates to show state view
-   - View all charging stations in the selected state
-2. Select a city from the dropdown
-   - Map zooms to city location
-   - Shows nearby charging stations
-3. View prediction results:
-   - Current statistics
-   - Predicted number of chargers
-   - List of nearby stations within 15 miles
+- The app uses the built-in `Cleaner_EV_Charging_Stations_3.csv` file for all graphs.
+- On the main page, select a graph/chart from the dropdown and click "Show Graph".
+- The graph will appear below the button.
+- The top right shows the total number of chargers in the USA (from the dataset) and a "+1" button to increment the number live (for fun/demo only).
 
-### 4. Viewing Station Details
-- Each station marker shows:
-  - Station name
-  - Street address
-  - City and state
-  - Total number of chargers
-  - Distance from selected location (when applicable)
+## Notes
+- If you see an error about missing packages (like `matplotlib` or `seaborn`), run:
+  ```
+  pip install matplotlib seaborn
+  ```
+- If you see a warning about "DtypeWarning: Columns (5) have mixed types," you can ignore it.
+- The app is for local/demo use. For production, use a production WSGI server.
 
 ## Data Sources
 

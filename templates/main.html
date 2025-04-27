@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Charging Station Predictor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .top-right-badge {
+            position: absolute;
+            top: 30px;
+            right: 40px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-right-badge">
+        <div class="card shadow-sm">
+            <div class="card-body py-2 px-3 d-flex align-items-center">
+                <span class="me-2">Total Chargers in USA:</span>
+                <span id="total-chargers" class="fw-bold text-primary">{{ total_chargers }}</span>
+                <button id="plus-one" class="btn btn-sm btn-success ms-3">+1</button>
+            </div>
+        </div>
+    </div>
+    <div class="container text-center mt-5">
+        <h1 class="display-4 mb-3">EV Charging Station Predictor</h1>
+        <p class="lead mb-4">Select a graph and visualize electric vehicle infrastructure data from the built-in clean dataset.</p>
+        <form id="processForm" method="POST" action="/process">
+            <div class="row justify-content-center mb-3">
+                <div class="col-md-6">
+                    <label for="graph_type" class="form-label">Select Graph/Chart</label>
+                    <select class="form-select" id="graph_type" name="graph_type" required>
+                        <option value="correlation_heatmap">Correlation Heatmap</option>
+                        <option value="station_distribution">Distribution of Charging Stations (Scatter)</option>
+                        <option value="kmeans_clustering">K-Means Clustering</option>
+                        <option value="dbscan_clustering">DBSCAN Clustering</option>
+                        <option value="birch_clustering">BIRCH Clustering</option>
+                        <option value="barh_ev_vs_stations">EV Registrations and Charging Stations (Barh)</option>
+                        <option value="pie_top5_stations">Top 5 States by Charging Stations (Pie Chart)</option>
+                        <option value="stacked_ev_vs_stations">EV Registrations vs Charging Stations (Stacked Bar)</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg">Show Graph</button>
+        </form>
+        <div class="mt-5" id="chart-result"></div>
+        <script>
+        document.getElementById('processForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('graph_type', document.getElementById('graph_type').value);
+            document.getElementById('chart-result').innerHTML = '<div class="text-muted">Processing...</div>';
+            const response = await fetch('/process', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            if (data.chart_url) {
+                document.getElementById('chart-result').innerHTML = `<img src="${data.chart_url}" class="img-fluid" alt="Generated Chart">`;
+            } else if (data.error) {
+                document.getElementById('chart-result').innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+            } else {
+                document.getElementById('chart-result').innerHTML = '<div class="alert alert-warning">Unknown error.</div>';
+            }
+        };
+        // +1 button logic
+        document.getElementById('plus-one').onclick = function() {
+            const el = document.getElementById('total-chargers');
+            el.textContent = parseInt(el.textContent.replace(/,/g, '')) + 1;
+        };
+        </script>
+        <footer class="mt-5 text-muted">
+            <hr>
+            <small>Created by Joseph and Jordan - Data Mining</small>
+        </footer>
+    </div>
+</body>
+</html> 
