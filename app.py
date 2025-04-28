@@ -76,12 +76,7 @@ def get_cities(state):
 
 @app.route('/')
 def welcome():
-    try:
-        df = pd.read_csv('Cleaner_EV_Charging_Stations_3.csv', encoding="latin1")
-        total_chargers = int(df['Total_Chargers'].sum())
-    except Exception:
-        total_chargers = 0
-    return render_template('main.html', total_chargers=total_chargers)
+    return render_template('main.html', total_chargers=0)
 
 @app.route('/wack')
 def home():
@@ -451,11 +446,18 @@ def allowed_file(filename):
 
 @app.route('/process', methods=['POST'])
 def process():
+    csv_file = request.files.get('csv_file')
     graph_type = request.form.get('graph_type')
+    if not csv_file:
+        return jsonify({'error': 'Please upload a CSV file.'})
     try:
-        station_df = pd.read_csv('Cleaner_EV_Charging_Stations_3.csv', encoding="latin1")
+        import io
+        station_df = pd.read_csv(io.BytesIO(csv_file.read()), encoding="latin1")
     except Exception as e:
-        return jsonify({'error': f'Could not load dataset: {e}'})
+        return jsonify({'error': f'Could not read uploaded file: {e}'})
+
+    # Calculate total chargers for badge update (optional, could be sent back in response)
+    total_chargers = int(station_df['Total_Chargers'].sum()) if 'Total_Chargers' in station_df.columns else 0
 
     # Generate chart based on selection
     chart_filename = f'chart_{uuid.uuid4().hex}.png'
@@ -467,14 +469,6 @@ def process():
             plt.figure(figsize=(10, 8))
             sns.heatmap(station_df[numeric_cols].corr(), annot=True, cmap="coolwarm")
             plt.title("Correlation Matrix of Numeric Features")
-            plt.tight_layout()
-            plt.savefig(chart_filepath)
-        elif graph_type == 'station_distribution':
-            plt.figure(figsize=(10, 6))
-            plt.scatter(station_df['Longitude'], station_df['Latitude'], alpha=0.3, s=2)
-            plt.title("Distribution of Charging Stations in the U.S.")
-            plt.xlabel("Longitude")
-            plt.ylabel("Latitude")
             plt.tight_layout()
             plt.savefig(chart_filepath)
         elif graph_type == 'kmeans_clustering':
@@ -528,58 +522,19 @@ def process():
             plt.colorbar(label="Cluster ID")
             plt.tight_layout()
             plt.savefig(chart_filepath)
-        elif graph_type == 'barh_ev_vs_stations':
-            # Barh: EV Registrations and Charging Stations (using only station_df)
-            reg_counts = station_df.groupby('State')['EV_Registrations'].sum()
-            station_counts = station_df.groupby('State')['Total_Chargers'].sum()
-            states = list(set(reg_counts.index) & set(station_counts.index))
-            reg_counts = reg_counts[states]
-            station_counts = station_counts[states]
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 8))
-            fig.suptitle('EV Infrastructure Analysis', fontsize=16, y=0.95)
-            # Plot 1: EV Registrations
-            colors = plt.cm.viridis(np.linspace(0.2, 0.8, len(states)))
-            bars1 = ax1.barh(states, reg_counts, color=colors, alpha=0.7)
-            ax1.set_title('EV Registrations by State', fontsize=14, pad=20)
-            ax1.set_xlabel('Number of Registrations', fontsize=12)
-            ax1.set_ylabel('State', fontsize=12)
-            # Plot 2: Charging Stations
-            bars2 = ax2.barh(states, station_counts, color=colors, alpha=0.7)
-            ax2.set_title('Charging Stations by State', fontsize=14, pad=20)
-            ax2.set_xlabel('Number of Charging Stations', fontsize=12)
-            ax2.set_ylabel('State', fontsize=12)
-            plt.tight_layout()
-            plt.savefig(chart_filepath)
         elif graph_type == 'pie_top5_stations':
-            # Pie chart: Top 5 States by Charging Stations
             station_counts = station_df.groupby('State')['Total_Chargers'].sum().sort_values(ascending=False)
             plt.figure(figsize=(12, 8))
             plt.pie(station_counts.head(5), labels=station_counts.head(5).index, autopct='%1.1f%%',
                     colors=plt.cm.viridis(np.linspace(0.2, 0.8, 5)), startangle=90)
             plt.title('Top 5 States by Charging Stations (February 2024 Data)', fontsize=14, pad=20)
             plt.savefig(chart_filepath)
-        elif graph_type == 'stacked_ev_vs_stations':
-            # Stacked bar: EV Registrations vs Charging Stations (Top 5 States)
-            station_counts = station_df.groupby('State')['Total_Chargers'].sum().sort_values(ascending=False)
-            top_5_states = station_counts.head(5).index
-            reg_data = station_df[station_df['State'].isin(top_5_states)].groupby('State')['EV_Registrations'].sum().reindex(top_5_states)
-            station_counts_top5 = station_counts[top_5_states]
-            fig, ax = plt.subplots(figsize=(12, 6))
-            x = np.arange(len(top_5_states))
-            width = 0.35
-            ax.bar(x - width/2, reg_data.values, width, label='EV Registrations', color='skyblue', alpha=0.7)
-            ax.bar(x + width/2, station_counts_top5.values, width, label='Charging Stations', color='lightgreen', alpha=0.7)
-            ax.set_ylabel('Count', fontsize=12)
-            ax.set_title('EV Registrations vs Charging Stations\nTop 5 States Comparison', fontsize=14, pad=20)
-            ax.set_xticks(x)
-            ax.set_xticklabels(top_5_states, rotation=45, ha='right')
-            ax.legend()
-            plt.tight_layout()
-            plt.savefig(chart_filepath)
+        elif graph_type == 'station_distribution':
+            return jsonify({'error': 'This graph type is not supported.'})
         else:
             return jsonify({'error': 'Invalid graph type selected.'})
         chart_url = f'/static/{chart_filename}'
-        return jsonify({'chart_url': chart_url})
+        return jsonify({'chart_url': chart_url, 'total_chargers': total_chargers})
     except Exception as e:
         return jsonify({'error': f'Error generating chart: {e}'})
 
