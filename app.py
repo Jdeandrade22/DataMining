@@ -465,27 +465,58 @@ def process():
     plt.clf()
     try:
         if graph_type == 'correlation_heatmap':
-            numeric_cols = station_df.select_dtypes(include=[np.number]).columns
+            # Select only numeric columns
+            numeric_cols = station_df.select_dtypes(include=['float64', 'int64']).columns
             plt.figure(figsize=(10, 8))
             sns.heatmap(station_df[numeric_cols].corr(), annot=True, cmap="coolwarm")
             plt.title("Correlation Matrix of Numeric Features")
             plt.tight_layout()
             plt.savefig(chart_filepath)
         elif graph_type == 'kmeans_clustering':
-            from sklearn.preprocessing import StandardScaler
             from sklearn.cluster import KMeans
-            features = ['Total_Chargers', 'Level2_Chargers', 'DC_Fast_Chargers']
-            df = station_df[features].dropna()
-            scaler = StandardScaler()
-            X_scaled = scaler.fit_transform(df)
+            # Select the proper fields
+            df_charger_config = station_df[['Total_Chargers', 'DC_Fast_Chargers', 'EV_Registrations', 'State']].dropna()
+            
+            # Apply K-Means clustering
             kmeans = KMeans(n_clusters=3, random_state=42)
-            df['Cluster'] = kmeans.fit_predict(X_scaled)
-            plt.figure(figsize=(8, 6))
-            plt.scatter(df['Total_Chargers'], df['DC_Fast_Chargers'], c=df['Cluster'], cmap='viridis', s=20)
-            plt.title('K-Means Clustering')
+            df_charger_config['Cluster'] = kmeans.fit_predict(df_charger_config[['Total_Chargers', 'DC_Fast_Chargers']])
+            
+            # Calculate total EV registrations per cluster (Drop repeating states in dataset)
+            df_unique_states = df_charger_config.drop_duplicates(subset='State')
+            ev_totals = df_unique_states.groupby('Cluster')['EV_Registrations'].sum().round(0).astype(int)
+            
+            # Calculate the number of stations per cluster
+            station_counts = df_charger_config['Cluster'].value_counts().sort_index()
+            
+            # Create summary text
+            summary_lines = [
+                f"Cluster {i}: {station_counts[i]} stations, {ev_totals[i]} EVs"
+                for i in sorted(df_charger_config['Cluster'].unique())
+            ]
+            summary_text = '\n'.join(summary_lines)
+            
+            # Plot the data
+            plt.figure(figsize=(9, 7))
+            plt.scatter(
+                df_charger_config['Total_Chargers'],
+                df_charger_config['DC_Fast_Chargers'],
+                c=df_charger_config['Cluster'],
+                cmap='viridis',
+                s=20
+            )
+            plt.title('K-Means Clustering of EV Charging Stations')
             plt.xlabel('Total Chargers')
             plt.ylabel('DC Fast Chargers')
             plt.colorbar(label='Cluster ID')
+            
+            # Add text box to show number of EVs and charging stations per cluster
+            plt.gcf().text(
+                0.63, 0.73,
+                'Cluster Data:\n' + summary_text,
+                bbox=dict(facecolor='white', alpha=0.85, edgecolor='black'),
+                fontsize=10
+            )
+            
             plt.tight_layout()
             plt.savefig(chart_filepath)
         elif graph_type == 'dbscan_clustering':
